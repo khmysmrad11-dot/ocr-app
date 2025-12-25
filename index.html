@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>خميس خلفيات - أدمن</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Segoe UI,Arial;
+  background:linear-gradient(135deg,#020617,#020617,#0f172a);
+  color:#fff;
+}
+.box{
+  max-width:420px;
+  margin:60px auto;
+  background:#0f172a;
+  padding:22px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+h3{text-align:center;margin-bottom:10px}
+input,select,button{
+  width:100%;
+  padding:14px;
+  margin-top:12px;
+  border:none;
+  border-radius:14px;
+  font-size:15px;
+}
+input,select{background:#020617;color:#fff}
+button{
+  background:#38bdf8;
+  color:#020617;
+  font-weight:700;
+  cursor:pointer;
+}
+button:active{transform:scale(.98)}
+#adminPanel{display:none}
+
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(2,6,23,.9);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.loader{
+  background:#0f172a;
+  padding:30px;
+  border-radius:18px;
+  text-align:center;
+}
+.spinner{
+  width:50px;height:50px;
+  border:5px solid #1e293b;
+  border-top:5px solid #38bdf8;
+  border-radius:50%;
+  margin:0 auto 15px;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success{color:#22c55e;font-weight:700}
+</style>
+</head>
+
+<body>
+
+<div id="overlay">
+  <div class="loader">
+    <div class="spinner"></div>
+    <div id="status">جاري الرفع...</div>
+  </div>
+</div>
+
+<div class="box" id="loginBox">
+  <h3>🔐 دخول الأدمن</h3>
+  <input type="password" id="pass" placeholder="كلمة المرور">
+  <button onclick="login()">دخول</button>
+</div>
+
+<div class="box" id="adminPanel">
+  <h3>🚀 نشر صورة</h3>
+
+  <input type="file" id="fileInput" accept="image/*">
+
+  <select id="category">
+    <option value="">اختر الفئة</option>
+    <option>جبال</option>
+    <option>بحار</option>
+    <option>حيوانات</option>
+    <option>مناظر طبيعية</option>
+    <option>بيوت</option>
+    <option>مسابح</option>
+    <option>مدارس</option>
+    <option>مدن</option>
+    <option>غابات</option>
+    <option>سماء</option>
+    <option>ورود</option>
+    <option>سيارات</option>
+  </select>
+
+  <button onclick="upload()">نشر الصورة</button>
+</div>
+
+<script>
+/* ====== كلمة مرور الأدمن ====== */
+const ADMIN_PASS = "kkkk7890";
+
+/* ====== Firebase ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBnRKitQGBX0u8k4COtDTILYxCJuMf7xzE",
+  authDomain: "exchange-rates-adcf6.firebaseapp.com",
+  databaseURL: "https://exchange-rates-adcf6.firebaseio.com",
+  projectId: "exchange-rates-adcf6",
+  storageBucket: "exchange-rates-adcf6.appspot.com",
+  messagingSenderId: "875614679042",
+  appId: "1:875614679042:web:5813c3e70a33e91ba0371b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+
+/* ====== تسجيل الدخول ====== */
+function login(){
+  if(pass.value === ADMIN_PASS){
+    loginBox.style.display="none";
+    adminPanel.style.display="block";
+  }else{
+    alert("كلمة المرور غير صحيحة");
+  }
+}
+
+/* ====== رفع الصورة (سريع) ====== */
+function upload(){
+  const f = fileInput.files[0];
+  const c = category.value;
+
+  if(!f || !c){
+    alert("اختر صورة وفئة");
+    return;
+  }
+
+  if(f.size > 5 * 1024 * 1024){
+    alert("الصورة كبيرة جدًا (الحد 5MB)");
+    return;
+  }
+
+  overlay.style.display="flex";
+  status.innerText="تجهيز الصورة...";
+
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => img.src = e.target.result;
+
+  img.onload = ()=>{
+    const canvas = document.createElement("canvas");
+    const maxW = 720;
+    const scale = Math.min(1, maxW / img.width);
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+
+    canvas.toBlob(blob=>{
+      const id = Date.now();
+      const ref = storage.ref("wallpapers/" + id + ".jpg");
+      const task = ref.put(blob);
+
+      task.on("state_changed",
+        snap=>{
+          const p = Math.round((snap.bytesTransferred/snap.totalBytes)*100);
+          status.innerText = "جاري الرفع... " + p + "%";
+        },
+        err=>{
+          alert("خطأ في الرفع");
+          overlay.style.display="none";
+        },
+        ()=>{
+          ref.getDownloadURL().then(url=>{
+            return db.ref("wallpapers/"+id).set({
+              url:url,
+              time:id,
+              category:c
+            });
+          }).then(()=>{
+            status.innerHTML="<span class='success'>✅ تم النشر بنجاح</span>";
+            setTimeout(()=>overlay.style.display="none",1500);
+            fileInput.value="";
+            category.value="";
+          });
+        }
+      );
+    },"image/jpeg",0.6);
+  };
+
+  reader.readAsDataURL(f);
+}
+</script>
+
+</body>
+</html>
