@@ -2,207 +2,273 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>خميس خلفيات - أدمن</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استخراج النص من الصورة</title>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <style>
+:root{
+  --primary:#2563EB;
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --text:#111;
+  --error:#e53935;
+}
+body.dark{
+  --bg:#0f172a;
+  --card:#020617;
+  --text:#e5e7eb;
+}
 body{
   margin:0;
-  font-family:Segoe UI,Arial;
-  background:linear-gradient(135deg,#020617,#020617,#0f172a);
-  color:#fff;
+  font-family:'Cairo',sans-serif;
+  background:var(--bg);
+  color:var(--text);
 }
-.box{
-  max-width:420px;
-  margin:60px auto;
-  background:#0f172a;
-  padding:22px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,.4);
-}
-h3{text-align:center;margin-bottom:10px}
-input,select,button{
-  width:100%;
-  padding:14px;
-  margin-top:12px;
-  border:none;
-  border-radius:14px;
-  font-size:15px;
-}
-input,select{background:#020617;color:#fff}
-button{
-  background:#38bdf8;
-  color:#020617;
-  font-weight:700;
-  cursor:pointer;
-}
-button:active{transform:scale(.98)}
-#adminPanel{display:none}
 
-#overlay{
+/* شاشة الترحيب */
+#welcome{
   position:fixed;
   inset:0;
-  background:rgba(2,6,23,.9);
-  display:none;
+  background:linear-gradient(135deg,#2563EB,#1e40af,#38bdf8);
+  display:flex;
   align-items:center;
   justify-content:center;
-  z-index:999;
+  z-index:9999;
+  animation:fadeIn .6s ease;
 }
-.loader{
-  background:#0f172a;
-  padding:30px;
-  border-radius:18px;
+.welcome-box{
+  background:rgba(255,255,255,.15);
+  backdrop-filter:blur(20px);
+  padding:25px;
+  border-radius:25px;
+  max-width:420px;
+  color:#fff;
+  text-align:center;
+  animation:slideUp .6s ease;
+}
+.welcome-box h2{margin-bottom:10px}
+.welcome-box p{line-height:1.8;font-size:14px}
+.welcome-box a{color:#fff;text-decoration:underline}
+.welcome-btn{
+  margin-top:18px;
+  background:#fff;
+  color:#2563EB;
+  border:none;
+  padding:14px 22px;
+  border-radius:30px;
+  font-size:16px;
+  cursor:pointer;
+  animation:pulse 1.6s infinite;
+}
+.welcome-footer{
+  margin-top:15px;
+  font-size:13px;
+}
+@keyframes pulse{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.05)}
+  100%{transform:scale(1)}
+}
+@keyframes slideUp{
+  from{transform:translateY(40px);opacity:0}
+  to{opacity:1}
+}
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* التطبيق */
+.container{
+  max-width:420px;
+  margin:30px auto;
+  background:var(--card);
+  padding:20px;
+  border-radius:20px;
+}
+h1{text-align:center;color:var(--primary)}
+
+.lang-btn{
+  position:absolute;
+  top:15px;
+  right:15px;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:20px;
+  cursor:pointer;
+}
+
+.upload{
+  border:2px dashed var(--primary);
+  padding:20px;
+  text-align:center;
+  border-radius:15px;
+  cursor:pointer;
+}
+
+img{
+  width:100%;
+  margin-top:12px;
+  border-radius:15px;
+  display:none;
+}
+
+textarea{
+  width:100%;
+  min-height:140px;
+  border-radius:15px;
+  padding:12px;
+  margin-top:15px;
+}
+
+button.main{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:15px;
+  background:var(--primary);
+  color:#fff;
+  font-size:16px;
+  margin-top:12px;
+  cursor:pointer;
+}
+
+#errorBox{
+  display:none;
+  background:var(--error);
+  color:#fff;
+  padding:14px;
+  border-radius:15px;
+  margin-top:12px;
   text-align:center;
 }
-.spinner{
-  width:50px;height:50px;
-  border:5px solid #1e293b;
-  border-top:5px solid #38bdf8;
-  border-radius:50%;
-  margin:0 auto 15px;
-  animation:spin 1s linear infinite;
+
+#errorBox button{
+  margin-top:8px;
+  padding:10px 14px;
+  border:none;
+  border-radius:12px;
+  background:#fff;
+  color:#e53935;
+  font-weight:bold;
+  cursor:pointer;
 }
-@keyframes spin{to{transform:rotate(360deg)}}
-.success{color:#22c55e;font-weight:700}
+
+footer{
+  text-align:center;
+  margin-top:15px;
+  font-size:14px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="overlay">
-  <div class="loader">
-    <div class="spinner"></div>
-    <div id="status">جاري الرفع...</div>
+<!-- شاشة الترحيب -->
+<div id="welcome">
+  <div class="welcome-box">
+    <h2>❓❌ ملاحظة التطبيق قيد التجربة ❌❓</h2>
+    <p>
+      هذا تطبيق ويب لاستخراج النص من الصور باستخدام تقنيات حديثة.<br>
+      يتيح للمستخدم رفع صورة تحتوي على نص، ثم تحليلها تلقائيًا باستخدام OCR.<br><br>
+      🔗 https://www.appcreator24.com/app3862641-fn1j5y
+    </p>
+    <button class="welcome-btn" onclick="closeWelcome()">الدخول إلى التطبيق</button>
+    <div class="welcome-footer">
+      تطوير: خميس مراد جروان<br>
+      <a href="https://wa.me/967784070972" target="_blank">💬 واتساب</a>
+    </div>
   </div>
 </div>
 
-<div class="box" id="loginBox">
-  <h3>🔐 دخول الأدمن</h3>
-  <input type="password" id="pass" placeholder="كلمة المرور">
-  <button onclick="login()">دخول</button>
-</div>
+<button class="lang-btn" onclick="toggleLang()">🌐 العربية</button>
 
-<div class="box" id="adminPanel">
-  <h3>🚀 نشر صورة</h3>
+<div class="container">
+  <h1 id="title">استخراج النص من الصورة</h1>
 
-  <input type="file" id="fileInput" accept="image/*">
+  <div class="upload" onclick="file.click()">📷 اضغط لاختيار صورة</div>
+  <input type="file" id="file" accept="image/*" hidden>
 
-  <select id="category">
-    <option value="">اختر الفئة</option>
-    <option>جبال</option>
-    <option>بحار</option>
-    <option>حيوانات</option>
-    <option>مناظر طبيعية</option>
-    <option>بيوت</option>
-    <option>مسابح</option>
-    <option>مدارس</option>
-    <option>مدن</option>
-    <option>غابات</option>
-    <option>سماء</option>
-    <option>ورود</option>
-    <option>سيارات</option>
-  </select>
+  <img id="preview">
 
-  <button onclick="upload()">نشر الصورة</button>
+  <textarea id="result" placeholder="سيظهر النص هنا..."></textarea>
+
+  <div id="errorBox">
+    ⚠️ حدث خطأ أثناء استخراج النص
+    <br>
+    <button onclick="resetError()">إعادة المحاولة</button>
+  </div>
+
+  <button class="main" onclick="copyText()">📋 نسخ النص</button>
+
+  <footer>
+    © تطوير: خميس مراد جروان<br>
+    <a href="https://wa.me/967784070972" target="_blank">💬 واتساب</a>
+  </footer>
 </div>
 
 <script>
-/* ====== كلمة مرور الأدمن ====== */
-const ADMIN_PASS = "kkkk7890";
+let lang='ar';
 
-/* ====== Firebase ====== */
-const firebaseConfig = {
-  apiKey: "AIzaSyBnRKitQGBX0u8k4COtDTILYxCJuMf7xzE",
-  authDomain: "exchange-rates-adcf6.firebaseapp.com",
-  databaseURL: "https://exchange-rates-adcf6.firebaseio.com",
-  projectId: "exchange-rates-adcf6",
-  storageBucket: "exchange-rates-adcf6.appspot.com",
-  messagingSenderId: "875614679042",
-  appId: "1:875614679042:web:5813c3e70a33e91ba0371b"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const storage = firebase.storage();
-
-/* ====== تسجيل الدخول ====== */
-function login(){
-  if(pass.value === ADMIN_PASS){
-    loginBox.style.display="none";
-    adminPanel.style.display="block";
-  }else{
-    alert("كلمة المرور غير صحيحة");
-  }
+function closeWelcome(){
+  document.getElementById('welcome').style.display='none';
 }
 
-/* ====== رفع الصورة (سريع) ====== */
-function upload(){
-  const f = fileInput.files[0];
-  const c = category.value;
+function vibrate(ms=50){
+  if(navigator.vibrate) navigator.vibrate(ms);
+}
 
-  if(!f || !c){
-    alert("اختر صورة وفئة");
-    return;
-  }
+file.onchange = e => {
+  const img = preview;
+  img.src = URL.createObjectURL(e.target.files[0]);
+  img.style.display = 'block';
+  result.value = '⏳ جارٍ المعالجة...';
+  errorBox.style.display='none';
 
-  if(f.size > 5 * 1024 * 1024){
-    alert("الصورة كبيرة جدًا (الحد 5MB)");
-    return;
-  }
+  Tesseract.recognize(
+    img,
+    lang==='ar' ? 'ara+eng' : 'eng'
+  ).then(r=>{
+    const text = r.data.text
+      .replace(/[^\u0600-\u06FFa-zA-Z0-9\s.,]/g,'')
+      .trim();
 
-  overlay.style.display="flex";
-  status.innerText="تجهيز الصورة...";
+    if(!text){
+      showError();
+      return;
+    }
+    result.value = text;
+    vibrate(80);
+  }).catch(showError);
+};
 
-  const img = new Image();
-  const reader = new FileReader();
-  reader.onload = e => img.src = e.target.result;
+function showError(){
+  errorBox.style.display='block';
+  result.value='';
+  vibrate([200,100,200]);
+}
 
-  img.onload = ()=>{
-    const canvas = document.createElement("canvas");
-    const maxW = 720;
-    const scale = Math.min(1, maxW / img.width);
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+function resetError(){
+  errorBox.style.display='none';
+  file.value='';
+}
 
-    canvas.toBlob(blob=>{
-      const id = Date.now();
-      const ref = storage.ref("wallpapers/" + id + ".jpg");
-      const task = ref.put(blob);
+function copyText(){
+  if(!result.value) return;
+  navigator.clipboard.writeText(result.value);
+  vibrate(60);
+}
 
-      task.on("state_changed",
-        snap=>{
-          const p = Math.round((snap.bytesTransferred/snap.totalBytes)*100);
-          status.innerText = "جاري الرفع... " + p + "%";
-        },
-        err=>{
-          alert("خطأ في الرفع");
-          overlay.style.display="none";
-        },
-        ()=>{
-          ref.getDownloadURL().then(url=>{
-            return db.ref("wallpapers/"+id).set({
-              url:url,
-              time:id,
-              category:c
-            });
-          }).then(()=>{
-            status.innerHTML="<span class='success'>✅ تم النشر بنجاح</span>";
-            setTimeout(()=>overlay.style.display="none",1500);
-            fileInput.value="";
-            category.value="";
-          });
-        }
-      );
-    },"image/jpeg",0.6);
-  };
-
-  reader.readAsDataURL(f);
+function toggleLang(){
+  lang = lang==='ar' ? 'en' : 'ar';
+  document.documentElement.dir = lang==='ar'?'rtl':'ltr';
+  title.textContent = lang==='ar'?'استخراج النص من الصورة':'Extract Text From Image';
+  result.placeholder = lang==='ar'?'سيظهر النص هنا...':'Text will appear here...';
 }
 </script>
 
